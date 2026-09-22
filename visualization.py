@@ -1,7 +1,7 @@
 """Generate charts for the Book Data Pipeline project.
 
-This script reads data from the existing SQLite database and creates a small
-visual report covering rating distribution, stock status, and price spread.
+This script reads data from the existing SQLite database and creates a single
+visual report showing price vs rating.
 
 Examples:
     python visualization.py
@@ -52,55 +52,26 @@ def build_dashboard(books: list[dict], output_path: str, show: bool = False) -> 
 
     prices = [float(book["price"]) for book in books]
     ratings = [int(book["rating"]) for book in books]
-    in_stock_count = sum(1 for book in books if book["in_stock"])
-    out_of_stock_count = len(books) - in_stock_count
+    colors = ["#4C72B0" if book["in_stock"] else "#C44E52" for book in books]
 
-    rating_counts = {rating: ratings.count(rating) for rating in range(1, 6)}
+    fig, ax = plt.subplots(figsize=(10, 7))
+    ax.scatter(ratings, prices, c=colors, alpha=0.85, edgecolors="black", linewidths=0.5)
+    ax.set_title("Price vs Rating Scatter Plot")
+    ax.set_xlabel("Rating")
+    ax.set_ylabel("Price (£)")
+    ax.set_xticks([1, 2, 3, 4, 5])
+    ax.grid(True, linestyle="--", alpha=0.3)
 
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle("Book Data Pipeline Dashboard", fontsize=18, fontweight="bold")
-
-    axes[0, 0].bar(rating_counts.keys(), rating_counts.values(), color="#4C72B0")
-    axes[0, 0].set_title("Books by Rating")
-    axes[0, 0].set_xlabel("Rating")
-    axes[0, 0].set_ylabel("Count")
-    axes[0, 0].set_xticks([1, 2, 3, 4, 5])
-
-    axes[0, 1].pie(
-        [in_stock_count, out_of_stock_count],
-        labels=["In stock", "Out of stock"],
-        autopct="%1.1f%%",
-        startangle=90,
-        colors=["#55A868", "#C44E52"],
+    ax.legend(
+        handles=[
+            plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#4C72B0", markeredgecolor="black", label="In stock", markersize=8),
+            plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#C44E52", markeredgecolor="black", label="Out of stock", markersize=8),
+        ],
+        loc="best",
+        frameon=True,
     )
-    axes[0, 1].set_title("Stock Status")
 
-    axes[1, 0].hist(prices, bins=min(10, len(prices)), color="#8172B2", edgecolor="black")
-    axes[1, 0].set_title("Price Distribution")
-    axes[1, 0].set_xlabel("Price (£)")
-    axes[1, 0].set_ylabel("Number of Books")
-
-    axes[1, 1].axis("off")
-    summary_text = (
-        f"Total books: {len(books)}\n"
-        f"In stock: {in_stock_count}\n"
-        f"Out of stock: {out_of_stock_count}\n"
-        f"Average price: £{sum(prices) / len(prices):.2f}\n"
-        f"Highest price: £{max(prices):.2f}\n"
-        f"Lowest price: £{min(prices):.2f}"
-    )
-    axes[1, 1].text(
-        0.05,
-        0.95,
-        summary_text,
-        va="top",
-        ha="left",
-        fontsize=12,
-        bbox={"facecolor": "white", "edgecolor": "gray", "boxstyle": "round,pad=0.5"},
-    )
-    axes[1, 1].set_title("Summary")
-
-    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    fig.tight_layout()
 
     output_file = Path(output_path)
     fig.savefig(output_file, dpi=150, bbox_inches="tight")
